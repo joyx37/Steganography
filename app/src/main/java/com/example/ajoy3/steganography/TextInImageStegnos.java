@@ -31,7 +31,6 @@ public class TextInImageStegnos extends FragmentActivity {
 
     public void OpenDialogue(View view) {
 
-        String imageName = Long.toString(new Date().getTime()) + ".jpg";
         DialogFragment imgDialog = new ChooseImage();
         android.app.FragmentManager fm = getFragmentManager();
         imgDialog.show(fm,imageName);
@@ -48,7 +47,7 @@ public class TextInImageStegnos extends FragmentActivity {
             if (Environment.MEDIA_MOUNTED.equals(state)) {
                 File directory = new File(Environment.getExternalStorageDirectory()+"/Steganos/Images/Sent/UserName/");
                 directory.mkdirs();
-                imageName = new Date().toString();
+                imageName = new Date().getTime()+".jpg";
                 file = new File(directory, imageName);
                 try {
                     file.createNewFile();
@@ -62,4 +61,10 @@ public class TextInImageStegnos extends FragmentActivity {
             }
         }
     }
+
+    public void DoStegnos(View view) {
+
+    }
+
+
 }

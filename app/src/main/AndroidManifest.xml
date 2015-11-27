@@ -22,10 +22,6 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ViewContacts"
-            android:label="@string/title_activity_view_contacts"
-            android:theme="@style/AppTheme.NoActionBar" />
-        <activity
             android:name=".ChooseTextorImage"
             android:label="@string/title_activity_choose_textor_image"
             android:theme="@style/AppTheme.NoActionBar" />

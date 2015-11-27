@@ -51,8 +51,8 @@ import java.util.Date;
         return super.onOptionsItemSelected(item);
     }
 
-     public void StartViewContactsActivity(View view) {
-         Intent intent = new Intent(this,ViewContacts.class);
+     public void ChooseTextOrImage(View view) {
+         Intent intent = new Intent(this,ChooseTextorImage.class);
          startActivity(intent);
      }
  }
