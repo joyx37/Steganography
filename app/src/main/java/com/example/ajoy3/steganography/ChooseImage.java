@@ -3,22 +3,16 @@ package com.example.ajoy3.steganography;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.app.Fragment;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Environment;
 import android.provider.MediaStore;
 
-import java.io.File;
-import java.io.FileOutputStream;
 
 /**
  * Created by ajoy3 on 11/25/2015.
  */
 public class ChooseImage extends DialogFragment {
-    private static final int REQUEST_CAMERA = 1;
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -36,7 +30,7 @@ public class ChooseImage extends DialogFragment {
                             }
                             case 1:{
                                 Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                                getActivity().startActivityForResult(cameraIntent, REQUEST_CAMERA);
+                                getActivity().startActivityForResult(cameraIntent, Constants.REQUEST_CAMERA);
                             }
                         }
                     }

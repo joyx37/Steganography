@@ -18,8 +18,6 @@ import java.util.Date;
 
  public class MainActivity extends AppCompatActivity {
 
-     private static final int REQUEST_CAMERA = 1;
-
      @Override
     protected void onCreate(Bundle savedInstanceState) {
          super.onCreate(savedInstanceState);
@@ -53,6 +51,11 @@ import java.util.Date;
 
      public void ChooseTextOrImage(View view) {
          Intent intent = new Intent(this,ChooseTextorImage.class);
+         startActivity(intent);
+     }
+
+     public void StartDecryptActivity(View view) {
+         Intent intent = new Intent(this,Decrypt.class);
          startActivity(intent);
      }
  }

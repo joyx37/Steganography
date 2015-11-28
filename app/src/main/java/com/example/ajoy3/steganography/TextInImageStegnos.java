@@ -6,10 +6,11 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -17,8 +18,10 @@ import java.util.Date;
 
 public class TextInImageStegnos extends FragmentActivity {
     private ImageView mImageView;
+    private EditText mEditText;
     private static final int REQUEST_CAMERA = 1;
     private static String imageName;
+    private static Bitmap carrierBitmap;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +29,7 @@ public class TextInImageStegnos extends FragmentActivity {
         setContentView(R.layout.activity_text_in_image_stegnos);
 
         mImageView = (ImageView)findViewById(R.id.imageView2);
+        mEditText = (EditText) findViewById(R.id.editText);
 
     }
 
@@ -40,19 +44,20 @@ public class TextInImageStegnos extends FragmentActivity {
         // TODO Auto-generated method stub
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CAMERA) {
-            Bitmap bitmap = (Bitmap) data.getExtras().get("data");
-            mImageView.setImageBitmap(bitmap);
+            carrierBitmap = (Bitmap) data.getExtras().get("data");
+            mImageView.setImageBitmap(carrierBitmap);
             String state = Environment.getExternalStorageState();
             File file;
             if (Environment.MEDIA_MOUNTED.equals(state)) {
                 File directory = new File(Environment.getExternalStorageDirectory()+"/Steganos/Images/Sent/UserName/");
                 directory.mkdirs();
-                imageName = new Date().getTime()+".jpg";
-                file = new File(directory, imageName);
+                imageName = Long.toString(new Date().getTime());
+                String imageNameJPEG = imageName+".jpg";
+                file = new File(directory, imageNameJPEG);
                 try {
                     file.createNewFile();
                     FileOutputStream out = new FileOutputStream(file);
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                    carrierBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
                     out.flush();
                     out.close();
                 } catch (Exception e) {
@@ -63,7 +68,45 @@ public class TextInImageStegnos extends FragmentActivity {
     }
 
     public void DoStegnos(View view) {
+        int w = carrierBitmap.getWidth();
+        int h = carrierBitmap.getHeight();
+        Bitmap msgBitmap = Bitmap.createBitmap(w, h, carrierBitmap.getConfig());
+        String msg = mEditText.getText().toString();
+        char msgArray[] = msg.toCharArray();
+        int msgSize = msgArray.length;
 
+        for(int i=0;i<w-2;i++)
+            for(int j=0;j<h-2;j++){
+                if(((h+1)*i)+j < msgSize){
+                    int pixel = carrierBitmap.getPixel(i,j);
+                    int temp = (pixel&Constants.PIXEL_MASK)+msgArray[((h+1)*i)+j];
+                    msgBitmap.setPixel(i, j, temp);
+                }
+                else
+                    msgBitmap.setPixel(i, j, carrierBitmap.getPixel(i, j));
+            }
+        msgBitmap.setPixel(w-2,h-2,(carrierBitmap.getPixel(w-2,h-2)&Constants.CODE_MASK)+Constants.TEXT_IN_IMAGE);
+        msgBitmap.setPixel(w - 1, h - 1, (carrierBitmap.getPixel(w - 1, h - 1) & Constants.MSG_SIZE_MASK) + msgSize);
+
+        String state = Environment.getExternalStorageState();
+        File file;
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            File directory = new File(Environment.getExternalStorageDirectory()+"/Steganos/Images/Sent/UserName/");
+            directory.mkdirs();
+            imageName = "msg";
+            String msgImage = imageName+"_msg"+".png";
+            file = new File(directory, msgImage);
+            try {
+                file.createNewFile();
+                FileOutputStream out = new FileOutputStream(file);
+                msgBitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+                out.flush();
+                out.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        Toast.makeText(this,"Message Image Stored",Toast.LENGTH_SHORT).show();
     }
 
 
