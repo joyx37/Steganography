@@ -26,5 +26,7 @@ public class ChooseTextorImage extends AppCompatActivity {
     }
 
     public void ImageInImageStegnos(View view) {
+        Intent intent = new Intent(this,ImageInImageStegnos.class);
+        startActivity(intent);
     }
 }

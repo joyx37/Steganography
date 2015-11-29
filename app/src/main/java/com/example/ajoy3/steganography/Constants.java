@@ -8,6 +8,6 @@ public class Constants {
     public static final int TEXT_IN_IMAGE = 10;//1010 - Code
     public static final int IMAGE_IN_IMAGE = 5;//0101 - Code
     public static final int CODE_MASK = 0xFFFFFFF0;
-    public static final int PIXEL_MASK = 0xFFFFFF00;
+    public static final int COLOR_MASK = 0xFFFFFF00;
     public static final int MSG_SIZE_MASK = 0xFFFFFF00;
 }

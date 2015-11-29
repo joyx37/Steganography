@@ -4,7 +4,7 @@
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -33,6 +33,10 @@
         <activity
             android:name=".Decrypt"
             android:label="@string/title_activity_decrypt"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".ImageInImageStegnos"
+            android:label="@string/title_activity_image_in_image_stegnos"
             android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 

@@ -50,7 +50,7 @@ public class Decrypt extends AppCompatActivity {
                 for (int j = 0; j < h; j++) {
                     if (((h + 1) * i) + j < msgSize) {
                         int pixel = receivedBitmap.getPixel(i, j);
-                        int temp = (pixel & (~Constants.PIXEL_MASK));
+                        int temp = (pixel & (~Constants.COLOR_MASK));
                         msgCharArray[((h + 1) * i) + j] = (char) temp;
                     } else
                         break;
