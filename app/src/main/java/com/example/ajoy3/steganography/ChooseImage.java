@@ -18,20 +18,20 @@ public class ChooseImage extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-        String[] items = {"Choose from SDcard","Capture Using Camera"};
-        builder.setTitle("Carrier Image")
+        String[] items = {"Choose From SDcard","Capture Using Camera"};
+        builder.setTitle("Image")
                 .setItems(items, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // The 'which' argument contains the index position
                         // of the selected item
-                        switch (which){
-                            case 0:{
-
-                            }
-                            case 1:{
-                                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                                getActivity().startActivityForResult(cameraIntent, Constants.REQUEST_CAMERA);
-                            }
+                        if (which == 0) {
+                            Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
+                            photoPickerIntent.setType("image/*");
+                            getActivity().startActivityForResult(photoPickerIntent, Constants.REQUEST_SDCARD);
+                        }
+                        else if (which == 1) {
+                            Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                            getActivity().startActivityForResult(cameraIntent, Constants.REQUEST_CAMERA);
                         }
                     }
                 });

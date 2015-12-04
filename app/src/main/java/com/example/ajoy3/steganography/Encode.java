@@ -4,10 +4,16 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.MediaScannerConnection;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Environment;
+import android.util.Log;
 import android.widget.Toast;
 
+import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Arrays;
 
 /**
  * Created by ajoy3 on 11/28/2015.
@@ -16,135 +22,100 @@ public class Encode extends AsyncTask<String,Void,Void> {
 
     private static Boolean success = false;
     private static Context mContext;
+    private static String hideThis,hideIn,writeTo;
 
     public void Encode(Context context){
         mContext = context;
     }
     @Override
     protected Void doInBackground(String... params) {
-        String hideThis = params[0];
-        String hideIn = params[1];
-        String writeTo = params[2];
+        hideThis = params[0];
+        hideIn = params[1];
+        writeTo = params[2];
 
-        encodePicture(hideThis,hideIn,writeTo);
+        encodePicture(hideThis, hideIn, writeTo);
+
         return null;
     }
 
     @Override
     protected void onPostExecute(Void v){
-        if(success)
-            Toast.makeText(mContext,"Stegnos Complete",Toast.LENGTH_SHORT).show();
+        if(success) {
+            Toast.makeText(mContext, "Stegnos Complete", Toast.LENGTH_SHORT).show();
+        }
     }
 
-        public static void encodePicture(String hideThis,String hideIn,String writeTo){
-        Bitmap imageToHide,placeToHide;
+    public static void encodePicture(String hideThis,String hideIn,String writeTo){
 
-        imageToHide = BitmapFactory.decodeFile(hideThis);
-        imageToHide = imageToHide.copy(imageToHide.getConfig(), true);
-        placeToHide = BitmapFactory.decodeFile(hideIn);
-        placeToHide = placeToHide.copy(placeToHide.getConfig(),true);
+        Bitmap secretImage = BitmapFactory.decodeFile(hideThis);
+        secretImage = secretImage.copy(secretImage.getConfig(), true);
 
-        int scaleFactor = 2;
-        while(((3 * imageToHide.getWidth() * imageToHide.getHeight()) + 2 > ((scaleFactor * scaleFactor * placeToHide.getHeight() * placeToHide.getWidth())))){
-            scaleFactor += 1;
-        }
 
-        placeToHide = scaleUp(placeToHide, scaleFactor);
-        placeToHide = placeToHide.copy(placeToHide.getConfig(),true);
+        Bitmap carrierImage = BitmapFactory.decodeFile(hideIn);
+        carrierImage = carrierImage.copy(carrierImage.getConfig(),true);
 
-        int imageWidth = imageToHide.getWidth();
-        int imageHeight = imageToHide.getHeight();
-        int[] imagePixels = new int[3 * imageWidth * imageHeight];
-        int[] currentPixelData;
-        for (int j = 0; j < imageWidth; j++){
-            for (int i = 0; i < imageHeight; i++){
-                currentPixelData = getPixelData(imageToHide.getPixel(j,i));
-                imagePixels[3 * ((j * imageHeight) + i)] = (currentPixelData[0]);
-                imagePixels[3 * ((j * imageHeight) + i) + 1] = (currentPixelData[1]);
-                imagePixels[3 * ((j * imageHeight) + i) + 2] = (currentPixelData[2]);
+        int imageWidth = secretImage.getWidth();
+        int imageHeight = secretImage.getHeight();
+        int[] imagePixels = new int[4 * imageWidth * imageHeight];
+
+        for (int i = 0; i < imageHeight; i++){
+            for (int j = 0; j < imageWidth; j++){
+                imagePixels[4 * ((i * imageWidth) + j)] = Color.alpha(secretImage.getPixel(j, i));
+                imagePixels[4 * ((i * imageWidth) + j) + 1] = Color.red(secretImage.getPixel(j, i));
+                imagePixels[4 * ((i * imageWidth) + j) + 2] = Color.green(secretImage.getPixel(j, i));
+                imagePixels[4 * ((i * imageWidth) + j) + 3] = Color.blue(secretImage.getPixel(j, i));
             }
         }
 
-        byte[] key = AES.generateKey();
-        imagePixels = convertToInt(AES.encrypt(key,convertToBytes(imagePixels)));
+        secretImage.recycle();
 
-        int placeWidth = placeToHide.getWidth();
-        int placeHeight = placeToHide.getHeight();
+        int carrierWidth = carrierImage.getWidth();
+        int carrierHeight = carrierImage.getHeight();
         int color;
-        for(int j = 0; j < placeWidth; j++){
-            for (int i = 0; i < placeHeight; i++){
+
+        //store code for image in image in last pixel
+        color = changeColor(carrierImage.getPixel(carrierWidth-1,carrierHeight-1),Constants.IMAGE_IN_IMAGE);
+        carrierImage.setPixel(carrierWidth-1,carrierHeight-1,color);
+
+        for(int i = 0; i < carrierHeight; i++){
+            for (int j = 0; j < carrierWidth; j++){
                 if((i == 0) && (j == 0)){
-                    color = changeColor(placeToHide.getPixel(0,0),imageWidth);
-                    placeToHide.setPixel(0,0,color);
+                    color = changeColor(carrierImage.getPixel(j,i),imageWidth);
+                    carrierImage.setPixel(0,0,color);
                 }
-                else if((i == 1) && (j == 0)){
-                    placeToHide.setPixel(0,1,changeColor(placeToHide.getPixel(0,1),imageHeight));
+                else if((i == 0) && (j == 1)){
+                    color = changeColor(carrierImage.getPixel(j,i),imageHeight);
+                    carrierImage.setPixel(i,j,color);
                 }
-                else if((j * placeHeight) + i == imagePixels.length + 2){
-                    placeToHide.setPixel(j,i,changeColor(placeToHide.getPixel(j,i),423));
+                else if(((i * carrierWidth) + j) == (imagePixels.length + 2)){
+                    color = changeColor(carrierImage.getPixel(j,i),Constants.IMAGE_IN_IMAGE);
+                    carrierImage.setPixel(j, i,color);//carrierImage.getPixel(j,i)&0xFFF0F0F0)|0xFFF4F2F3
                     try{
                         FileOutputStream output = new FileOutputStream(writeTo);
-                        placeToHide.compress(Bitmap.CompressFormat.PNG,100,output);
+                        carrierImage.compress(Bitmap.CompressFormat.PNG,100,output);
                         output.close();
                         success = true;
+                        MediaScannerConnection.scanFile(mContext,
+                                new String[]{new File(writeTo).toString()}, null,
+                                new MediaScannerConnection.OnScanCompletedListener() {
+                                    public void onScanCompleted(String path, Uri uri) {
+                                        Log.i("ExternalStorage", "Scanned " + path + ":");
+                                        Log.i("ExternalStorage", "-> uri=" + uri);
+                                    }
+                                });
+
+                        return;
                     }
                     catch(Exception e){
                         System.out.println(e);
+                        return;
                     }
-                    return;
                 }
                 else{
-                    placeToHide.setPixel(j,i,changeColor(placeToHide.getPixel(j,i),imagePixels[(j * placeHeight) + i - 2]));
+                    carrierImage.setPixel(j,i, changeColor(carrierImage.getPixel(j,i), imagePixels[(i * carrierWidth) + j - 2]));
                 }
             }
         }
-        return;
-    }
-
-    public static int[] getPixelData(int color){
-
-        int[] pixelData = new int[3];
-        pixelData[0] = Color.red(color);
-        pixelData[1] = Color.green(color);
-        pixelData[2] = Color.blue(color);
-        return pixelData;
-
-    }
-
-    public static byte[] convertToBytes(int[] ints){
-        byte[] bytes = new byte[ints.length];
-
-        for (int i=0; i<ints.length; i++) {
-            bytes[i] = (byte) ((ints[i]) & 0xFF);
-        }
-        return bytes;
-
-    }
-
-    public static int[] convertToInt(byte[] bytes){
-        int[] ints = new int[bytes.length];
-        for (int i = 0; i < ints.length; i += 1){
-            ints[i] = bytes[i]&0xFF;
-        }
-        return ints;
-
-    }
-
-    public static Bitmap scaleUp(Bitmap original,int scaleFactor){
-
-        int[] color = new int[scaleFactor * scaleFactor * original.getWidth() * original.getHeight()];
-        for (int i = 0; i < original.getHeight(); i += 1){
-            for (int j = 0; j < original.getWidth(); j += 1){
-                for (int k = 0; k < scaleFactor; k += 1){
-                    for (int l = 0; l < scaleFactor; l += 1){
-                        color[(((i * scaleFactor) + k) * original.getWidth()) + (j * scaleFactor) + l] = original.getPixel(j,i);
-                    }
-                }
-            }
-        }
-        original.recycle();
-        return Bitmap.createBitmap(color, scaleFactor * original.getWidth(), scaleFactor * original.getHeight(), original.getConfig());
-
     }
 
     public static int changeColor(int currentColor,int inputNumber){

@@ -308,11 +308,14 @@ public class BluetoothChatService {
                 try {
                     // This is a blocking call and will only return on a
                     // successful connection or an exception
+                    Log.e("STEGANOS", "Trying to accept a connection to the bluetooth socket");
                     socket = mmServerSocket.accept();
                 } catch (IOException e) {
                     Log.e(TAG, "Socket Type: " + mSocketType + "accept() failed", e);
                     break;
                 }
+                if(socket==null)
+                    Log.e("STEGANOS", "SOCKET is NULL");
 
                 // If a connection was accepted
                 if (socket != null) {
@@ -502,4 +505,3 @@ public class BluetoothChatService {
         }
     }
 }
-

@@ -19,20 +19,23 @@ import android.view.MenuItem;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RadioButton;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
- public class MainActivity extends FragmentActivity {
+ public class MainActivity extends Activity {
 
      private static final int REQUEST_CAMERA = 1;
      public static final int PAIR_DEVICE_REQUEST = 2;
@@ -41,7 +44,11 @@ import java.util.Set;
 
      KeyPairDbHandler dbHandler;
      List<PairInformation> myPairedDevicesInfo;
+     List<Model> list;
      ListView PairedDeviceListView;
+
+     String UserName;
+     String sharedKey;
 
 
      Button BtnPairDevices;
@@ -74,8 +81,8 @@ import java.util.Set;
              public void onClick(View v) {
                  //Launch the activity for obtaining the device list
                  Intent newIntent = new Intent();
-                 newIntent.setClass(MainActivity.this, ConnectActivity.class);
-                 startActivityForResult(newIntent, PAIR_DEVICE_REQUEST);
+                 newIntent.setClass(MainActivity.this, ShareKeyActivity.class);
+                 startActivity(newIntent);
 
              }
          });
@@ -84,7 +91,7 @@ import java.util.Set;
          BtnLaunchSteganos.setOnClickListener(new View.OnClickListener() {
              @Override
              public void onClick(View v) {
-                 //ChooseTextOrImage(v);
+                 ChooseTextOrImage(v);
              }
          });
 
@@ -92,38 +99,15 @@ import java.util.Set;
          BtnStartDecryption.setOnClickListener(new View.OnClickListener() {
              @Override
              public void onClick(View v) {
-                 //StartDecryptActivity(v);
+                 StartDecryptActivity(v);
              }
          });
     }
 
-     /**
-      * The on-click listener for all devices in the ListViews
-      */
-     private AdapterView.OnItemClickListener mDeviceClickListener
-             = new AdapterView.OnItemClickListener() {
-         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
-             // Cancel discovery because it's costly and we're about to connect
-             bluetoothAdapter.cancelDiscovery();
-//
-//             FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-//             BluetoothShareKeyFragment fragment = new BluetoothShareKeyFragment();
-//             transaction.replace(R.id.sample_fragment_layout, fragment);
-//             transaction.commit();
+     TextView label;
+     CheckBox checkbox;
 
-//             // Get the device MAC address, which is the last 17 chars in the View
-//             String info = ((TextView) v).getText().toString();
-//             String address = info.substring(info.length() - 17);
-//
-//             // Create the result Intent and include the MAC address
-//             Intent intent = new Intent();
-//             intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
-//             // Set result and finish this Activity
-//             setResult(Activity.RESULT_OK, intent); //in the receiving activity, add the details to the database
-//             finish();
-         }
-     };
-     @Override
+      @Override
      public void onResume()
      {
          super.onResume();
@@ -132,11 +116,16 @@ import java.util.Set;
 
      private void fetchPairedDeviceData(List<PairInformation> _myPairedDevicesInfo) {
 
+//         dbHandler.clearDatabase();
          if(_myPairedDevicesInfo.isEmpty()){
              Log.e("STEGANOS", "The List is Empty");
-             dbHandler.testInitialization(); //adding temporary values to the Db
+//             Toast.makeText(this, "NO CONNECTIONS TO DEVICES YET! Hit PAIR TO SHARE KEY & CREATE CONNECTIONS!", Toast.LENGTH_LONG).show();
+//             dbHandler.clearDatabase(); //adding temporary values to the Db
          }
          else{
+
+             list = new ArrayList<Model>();
+
              String _deviceNames[] = new String[dbHandler.getPairedDeviceCount()];
 
              for (int index = 0; index < dbHandler.getPairedDeviceCount(); index++) {
@@ -144,11 +133,43 @@ import java.util.Set;
                         " , " + _myPairedDevicesInfo.get(index).get_nickname() + " , " + _myPairedDevicesInfo.get(index).get_sharedkey());
                  _deviceNames[index] = _myPairedDevicesInfo.get(index).get_nameofpairer();
              }
-             ArrayAdapter<String> _myData = new ArrayAdapter<String>(this, R.layout.listviewlayout, _deviceNames);
+             ArrayAdapter<Model> _myData = new MyListAdapter(this, getModel(_deviceNames));
+
+//             ArrayAdapter<String> _myData = new ArrayAdapter<String>(MainActivity.this, R.layout.listviewlayout,_deviceNames);
              PairedDeviceListView.setAdapter(_myData);
-             PairedDeviceListView.setOnItemClickListener(mDeviceClickListener);
+             PairedDeviceListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                 @Override
+                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                     Log.e("STEGANOS", "Inside on item click method");
+
+                     label = (TextView) view.getTag(R.id.listlabel);
+                     checkbox = (CheckBox) view.getTag(R.id.checkitem);
+                     Toggle(checkbox);
+
+                     // TODO: Get name of device and if enabled from each of the selected entries
+                     UserName = label.getText().toString();
+                     Toast.makeText(MainActivity.this, "Selected Recepient is: " +UserName, Toast.LENGTH_SHORT).show();
+                 }
+             });
+
          }
      }
+
+     private void Toggle(CheckBox checkbox) {
+        checkbox.setChecked(!checkbox.isChecked());
+     }
+
+     private boolean isCheckedOrNot(CheckBox checkBox) {
+         return (checkBox.isChecked());
+     }
+
+     private List<Model> getModel(String[] stringVals) {
+         for (int index = 0; index < stringVals.length; index++){
+             list.add(new Model(stringVals[index]));
+         }
+         return list;
+     }
+
 
      @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -173,12 +194,40 @@ import java.util.Set;
     }
 
      public void ChooseTextOrImage(View view) {
-         Intent intent = new Intent(this,ChooseTextorImage.class);
-         startActivity(intent);
+         //TODO: Add UserName inside the intent to pass on to the activity, do it only if checked;
+
+         if(isCheckedOrNot(checkbox)){
+            //get the String from the checked textview
+             Log.e("STEGANOS", "Entering the choose text r image method");
+
+            // Get Key from the database;
+             for(int index = 0; index<dbHandler.getPairedDeviceCount(); index++) {
+                if( (dbHandler.getAllMyPairedDeviceInfo().get(index).get_nameofpairer()).equals(UserName))
+                 {
+
+                     sharedKey = dbHandler.getAllMyPairedDeviceInfo().get(index).get_sharedkey();
+//                     Toast.makeText(this, "The shared Key is: " + sharedKey, Toast.LENGTH_SHORT).show();
+                     Toast.makeText(this, "The key for "+ UserName +" is chosen!", Toast.LENGTH_SHORT).show();
+                     Intent intent = new Intent(this,ChooseTextorImage.class);
+                     intent.putExtra(Constants.CHOSEN_KEY, sharedKey);
+                     intent.putExtra(Constants.USER_NAME, UserName);
+                     startActivity(intent);
+                 }
+             }
+
+
+         }
+         else
+         {
+             Toast.makeText(this, "INVALID SELECTION", Toast.LENGTH_SHORT).show();
+         }
      }
 
      public void StartDecryptActivity(View view) {
+
          Intent intent = new Intent(this,Decrypt.class);
+         intent.putExtra(Constants.USER_NAME, UserName);
+         intent.putExtra(Constants.CHOSEN_KEY, sharedKey);
          startActivity(intent);
      }
 
@@ -196,5 +245,22 @@ import java.util.Set;
 
          if(bluetoothAdapter.isEnabled())
              bluetoothAdapter.disable();
+     }
+     @Override
+     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+         try {
+             super.onActivityResult(requestCode, resultCode, data);
+
+             if (requestCode == PAIR_DEVICE_REQUEST) {
+                 if(resultCode == RESULT_OK){
+                     //Refresh the paired list devices with the newly paired device
+                 }
+
+             }
+         } catch (Exception ex) {
+             Toast.makeText(this, ex.toString(),
+                     Toast.LENGTH_SHORT).show();
+         }
+
      }
  }

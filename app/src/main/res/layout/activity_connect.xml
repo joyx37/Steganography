@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -33,49 +34,53 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="FIND NEW DEVICES"
+        android:text="REFRESH"
         android:id="@+id/buttonScanNewDevices"
         android:background="#ff9900"
         android:layout_gravity="center_horizontal"
         android:padding="10dp"
         android:layout_below="@+id/pairedDeviceListLayout"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="72dp" />
 
-    <LinearLayout
-        android:layout_width="wrap_content"
+    <!--<LinearLayout-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:id="@+id/availableDeviceListLayout"-->
+        <!--android:orientation="vertical"-->
+        <!--android:visibility="visible"-->
+        <!--android:layout_alignParentBottom="true"-->
+        <!--android:layout_alignParentStart="true">-->
+        <!--<TextView-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:textAppearance="?android:attr/textAppearanceSmall"-->
+            <!--android:text="Available Devices"-->
+            <!--android:id="@+id/newDeviceListTitle"-->
+            <!--android:layout_gravity="center_horizontal"-->
+            <!--android:gravity="center"-->
+            <!--android:background="#ff9900"-->
+            <!--android:padding="5dp" />-->
+
+        <!--<ListView-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="200dp"-->
+            <!--android:id="@+id/discoveredDevices"-->
+            <!--android:choiceMode="singleChoice"-->
+            <!--android:clickable="true"-->
+            <!--android:padding="5dp">-->
+        <!--</ListView>-->
+
+    <!--</LinearLayout>-->
+
+    <fragment
+        android:id="@+id/sample_fragment_layout"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/availableDeviceListLayout"
-        android:orientation="vertical"
-        android:visibility="visible"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true">
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceSmall"
-            android:text="Available Devices"
-            android:id="@+id/newDeviceListTitle"
-            android:layout_gravity="center_horizontal"
-            android:gravity="center"
-            android:background="#ff9900"
-            android:padding="5dp" />
-
-        <ListView
-            android:layout_width="wrap_content"
-            android:layout_height="200dp"
-            android:id="@+id/discoveredDevices"
-            android:choiceMode="singleChoice"
-            android:clickable="true"
-            android:padding="5dp">
-        </ListView>
-
-        <fragment
-            android:id="@+id/sample_fragment_layout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:name="com.example.ajoy3.steganography.BluetoothShareKeyFragment"
-            android:layout_gravity="center_horizontal" />
-    </LinearLayout>
-
+        android:name="com.example.ajoy3.steganography.BluetoothShareKeyFragment"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="65dp"
+        android:layout_below="@+id/buttonScanNewDevices"
+        android:layout_alignParentStart="true" />
 
 </RelativeLayout>

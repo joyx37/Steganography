@@ -26,7 +26,7 @@ public class LaunchActivity extends Activity {
                 mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(mainIntent);
             }
-        }, 2500);
+        }, 1000);
     }
 
 }

@@ -34,13 +34,33 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Created by Malabika on 11/29/2015.
  */
 
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
+
+/**
+ * This fragment controls Bluetooth to communicate with other devices.
+ */
+public class BluetoothChatFragment extends Fragment {
 
     private static final String TAG = "BluetoothChatFragment";
 
@@ -49,10 +69,10 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
     private static final int REQUEST_CONNECT_DEVICE_INSECURE = 2;
     private static final int REQUEST_ENABLE_BT = 3;
 
-    //private ListView mKeyListView;
-    //private ArrayList<File> list = new ArrayList<File>();
-    //private ArrayList<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
-    //private String mKey=null;
+    private ListView mKeyListView;
+    private ArrayList<File> list = new ArrayList<File>();
+    private ArrayList<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
+    private String mKey=null;
 
     // Layout Views
     private ListView mConversationView;
@@ -60,9 +80,7 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
     private Button mSendButton;
     private Button mStoreButton;
 
-    private String mKey=null;
-    private AES mAES2;
-
+    KeyPairDbHandler dbHandler;
     /**
      * Name of the connected device
      */
@@ -88,10 +106,14 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
      */
     private BluetoothChatService mChatService = null;
 
+    Button BtnSecureScan;
+    private AES mAES;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
+
+//        setHasOptionsMenu(true);
         // Get local Bluetooth adapter
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -101,6 +123,8 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
             Toast.makeText(activity, "Bluetooth is not available", Toast.LENGTH_LONG).show();
             activity.finish();
         }
+
+        dbHandler = new KeyPairDbHandler(getContext(), null, null, 1);
     }
 
 
@@ -154,11 +178,12 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
         mOutEditText = (EditText) view.findViewById(R.id.edit_text_out);
         mSendButton = (Button) view.findViewById(R.id.button_send);
         mStoreButton=(Button) view.findViewById(R.id.button_store);
+        BtnSecureScan = (Button)view.findViewById(R.id.secure_connect_scan);
 
         // build the key list
 //        mKeyListView=(ListView)view.findViewById(R.id.mkeylistview);
         // read the list
-        //getAllFiles(new File(Constants.KEY_LIST));
+        getAllFiles(new File(Constants.KEY_LIST));
     }
 
     /**
@@ -167,14 +192,45 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
     private void setupChat() {
         Log.d(TAG, "setupChat()");
 
-//        // Initialize the array adapter for the conversation thread
+        // Initalize the key list
+        final SimpleAdapter adapter = new SimpleAdapter(BluetoothChatFragment.this.getActivity(), getMapData(list), R.layout.keyitem,
+                new String[]{"itemfileName"},
+                new int[]{R.id.fileName});
+//        mKeyListView.setAdapter(adapter);
+//        Log.d(TAG, "show the list");
+//
+//        mKeyListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+//            @Override
+//            public void onItemClick(AdapterView<?> arg0, View arg1, int arg2, long arg3) {
+//                Toast.makeText(BluetoothChatFragment.this.getActivity(), "You select the key: " + list.get(arg2).getName(), Toast.LENGTH_LONG).show();
+//                // Get the select key name
+//                mKey = list.get(arg2).getName();
+//                View view = getView();
+//                if(null!=view){
+//                    TextView textView = (TextView) view.findViewById(R.id.edit_text_out);
+//                    textView.setText(mKey);
+//                }
+//            }
+//        });
+
+        // Initialize the array adapter for the conversation thread
 //        mConversationArrayAdapter = new ArrayAdapter<String>(getActivity(), R.layout.message);
-//
+
 //        mConversationView.setAdapter(mConversationArrayAdapter);
-//
-//        // Initialize the compose field with a listener for the return key
-//        mOutEditText.setOnEditorActionListener(mWriteListener);
-//
+
+        // Initialize the compose field with a listener for the return key
+        mOutEditText.setOnEditorActionListener(mWriteListener);
+
+        BtnSecureScan.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Launch the DeviceListActivity to see devices and do scan
+                Intent serverIntent = new Intent(getActivity(), DeviceListActivity.class);
+                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
+            }
+        });
+
+
         // Initialize the send button with a listener that for click events
         mSendButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -184,14 +240,21 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
                     TextView textView = (TextView) view.findViewById(R.id.edit_text_out);
                     //create AES key
                     try{
-                        mKey = mAES2.randomkey();
+                        mKey = mAES.randomkey();
                     }catch(Exception e){
                         // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
                     if(null!=mKey) {
-                        textView.setText("Key: "+mKey);
-                        Toast.makeText(getActivity(),"key: " + mKey, Toast.LENGTH_SHORT).show();
+                        textView.setText("Your key is Ready & Sent!");
+                        Toast.makeText(getActivity(),"key: " + mKey + "Device Name: "+mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                        dbHandler.createPairInfoEntry(new PairInformation(dbHandler.getPairedDeviceCount(),mConnectedDeviceName,"",mKey));
+//                        for(int index =0; index<dbHandler.getPairedDeviceCount(); index++)
+//                        {
+//                            if(dbHandler.getAllMyPairedDeviceInfo().get(index).get_nameofpairer().equals(mConnectedDeviceName)){
+//                                dbHandler.getAllMyPairedDeviceInfo().get(index).set_sharedkey(mKey);
+//                            }
+//                        }
                         sendMessage(mKey);
                         mKey=null;
                     }
@@ -200,11 +263,10 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
         });
 
         // Initialize the store button in invisible state
-        mStoreButton.setVisibility(View.VISIBLE);
-        mStoreButton.setEnabled(false);
+        mStoreButton.setVisibility(View.INVISIBLE);
 
         // Initialize the BluetoothChatService to perform bluetooth connections
-        mChatService = new BluetoothChatService(getActivity().getApplicationContext(), mHandler);
+        mChatService = new BluetoothChatService(getActivity(), mHandler);
 
         // Initialize the buffer for outgoing messages
         mOutStringBuffer = new StringBuffer("");
@@ -213,14 +275,14 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
     /**
      * Makes this device discoverable.
      */
-//    private void ensureDiscoverable() {
-//        if (mBluetoothAdapter.getScanMode() !=
-//                BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-//            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-//            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-//            startActivity(discoverableIntent);
-//        }
-//    }
+    private void ensureDiscoverable() {
+        if (mBluetoothAdapter.getScanMode() !=
+                BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+            startActivity(discoverableIntent);
+        }
+    }
 
     /**
      * Sends a message.
@@ -249,8 +311,8 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
     /**
      * The action listener for the EditText widget, to listen for the return key
      */
-    private OnEditorActionListener mWriteListener
-            = new OnEditorActionListener() {
+    private TextView.OnEditorActionListener mWriteListener
+            = new TextView.OnEditorActionListener() {
         public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
             // If the action is a key-up event on the return key, send the message
             if (actionId == EditorInfo.IME_NULL && event.getAction() == KeyEvent.ACTION_UP) {
@@ -307,7 +369,7 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
                     switch (msg.arg1) {
                         case BluetoothChatService.STATE_CONNECTED:
                             setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
-                            mConversationArrayAdapter.clear();
+//                            mConversationArrayAdapter.clear();
                             break;
                         case BluetoothChatService.STATE_CONNECTING:
                             setStatus(R.string.title_connecting);
@@ -322,22 +384,35 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
                     byte[] writeBuf = (byte[]) msg.obj;
                     // construct a string from the buffer
                     String writeMessage = new String(writeBuf);
-                    mConversationArrayAdapter.add("Me:  " + writeMessage);
+//                    mConversationArrayAdapter.add("Me:  " + writeMessage);
                     break;
                 case Constants.MESSAGE_READ:
                     byte[] readBuf = (byte[]) msg.obj;
                     // construct a string from the valid bytes in the buffer
                     final String readMessage = new String(readBuf, 0, msg.arg1);
-                    mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    Log.e("Steganos--readmessage", readMessage);
+//                    mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    Toast.makeText(getContext(), "YOUR KEY HAS BEEN RECEIVED!", Toast.LENGTH_LONG).show();
 
                     // Initialize the store button with a listener that for click events
                     mStoreButton.setVisibility(View.VISIBLE);
-                    mStoreButton.setEnabled(true);
                     mStoreButton.setOnClickListener(new View.OnClickListener() {
+                        String macid;
                         @Override
                         public void onClick(View v) {
-                            Toast.makeText(getActivity(), "The key: "+readMessage + " stores successfully!", Toast.LENGTH_LONG).show();
-                            //Store key in DB
+                            Toast.makeText(getActivity(), "The key has been stored successfully!", Toast.LENGTH_LONG).show();
+                            Log.e("mDeviceName: ", mConnectedDeviceName);
+
+                            //Add the key to DB
+//                            Set<BluetoothDevice> devices = mBluetoothAdapter.getBondedDevices();
+//                            if (devices.size() > 0) {
+//                                for (BluetoothDevice device : devices) {
+//                                    Log.e("GetName", device.getName());
+////                                   if((device.getName()).equals(mConnectedDeviceName))
+////                                         macid = device.getAddress();
+//                                }
+//                            }
+                            dbHandler.createPairInfoEntry(new PairInformation(dbHandler.getPairedDeviceCount(),mConnectedDeviceName," ",readMessage));
                         }
                     });
                     break;
@@ -391,13 +466,13 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
     /**
      * Establish connection with other divice
      *
-     * @param data   An {@link Intent} with {@link ConnectActivity#EXTRA_DEVICE_ADDRESS} extra.
+     * @param data   An {@link Intent} with {@link DeviceListActivity#EXTRA_DEVICE_ADDRESS} extra.
      * @param secure Socket Security type - Secure (true) , Insecure (false)
      */
     private void connectDevice(Intent data, boolean secure) {
         // Get the device MAC address
         String address = data.getExtras()
-                .getString(ConnectActivity.EXTRA_DEVICE_ADDRESS);
+                .getString(DeviceListActivity.EXTRA_DEVICE_ADDRESS);
         // Get the BluetoothDevice object
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         // Attempt to connect to the device
@@ -406,21 +481,21 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        //inflater.inflate(R.menu.bluetooth_chat, menu);
+        inflater.inflate(R.menu.bluetooth_chat, menu);
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        /*switch (item.getItemId()) {
+        switch (item.getItemId()) {
             case R.id.secure_connect_scan: {
                 // Launch the DeviceListActivity to see devices and do scan
-                Intent serverIntent = new Intent(getActivity(), ConnectActivity.class);
+                Intent serverIntent = new Intent(getActivity(), DeviceListActivity.class);
                 startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
                 return true;
             }
             case R.id.insecure_connect_scan: {
                 // Launch the DeviceListActivity to see devices and do scan
-                Intent serverIntent = new Intent(getActivity(), ConnectActivity.class);
+                Intent serverIntent = new Intent(getActivity(), DeviceListActivity.class);
                 startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
                 return true;
             }
@@ -429,8 +504,35 @@ public class BluetoothShareKeyFragment extends android.support.v4.app.Fragment {
                 ensureDiscoverable();
                 return true;
             }
-        }*/
+        }
         return false;
     }
-}
 
+    private ArrayList<Map<String, Object>> getMapData(ArrayList<File> list) {
+        HashMap<String, Object> item;
+        int i = 0;
+        for (i = 0; i < list.size(); i++) {
+            item = new HashMap<String, Object>();
+            String path = list.get(i).toString();
+            String name = path.substring(path.lastIndexOf("/") + 1, path.length());
+            item.put("itemfileName", name);
+            data.add(item);
+        }
+        return data;
+    }
+
+    private void getAllFiles(File file) {
+        File files[] = file.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.isDirectory()) {
+                    getAllFiles(f);
+                } else {
+                    list.add(f);
+                }
+            }
+        }
+    }
+
+
+}

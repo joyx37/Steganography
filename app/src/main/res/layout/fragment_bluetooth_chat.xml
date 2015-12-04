@@ -19,21 +19,34 @@
               android:layout_height="match_parent"
               android:orientation="vertical" >
 
-    <ListView
-        android:id="@+id/mkeylistview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:stackFromBottom="true"
-        android:transcriptMode="alwaysScroll" />
+    <!--<ListView-->
+        <!--android:id="@+id/mkeylistview"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:layout_weight="1"-->
+        <!--android:stackFromBottom="true"-->
+        <!--android:transcriptMode="alwaysScroll" />-->
 
-    <ListView
-        android:id="@+id/in"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:stackFromBottom="true"
-        android:transcriptMode="alwaysScroll" />
+    <!--<ListView-->
+        <!--android:id="@+id/in"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:layout_weight="1"-->
+        <!--android:stackFromBottom="true"-->
+        <!--android:transcriptMode="alwaysScroll" />-->
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/secure_connect_scan"
+        android:text = "SCAN"
+        android:clickable="true"/>
+
+    <Button
+        android:id="@+id/button_store"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/store" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -42,22 +55,17 @@
 
         <EditText
             android:id="@+id/edit_text_out"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_weight="1" />
+            android:layout_weight="0.15" />
 
         <Button
             android:id="@+id/button_send"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/send" />
+            android:text="@string/send"
+            android:layout_gravity="right" />
 
-        <Button
-            android:id="@+id/button_store"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/store" />
     </LinearLayout>
 
 </LinearLayout>

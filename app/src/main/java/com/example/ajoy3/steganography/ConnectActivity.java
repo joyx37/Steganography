@@ -1,6 +1,9 @@
 package com.example.ajoy3.steganography;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothSocket;
+import android.os.ParcelUuid;
+import android.support.v4.app.FragmentManager;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
@@ -8,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.util.Log;
@@ -20,10 +24,15 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.example.ajoy3.steganography.SendKeyFragment.KeyCreateListener;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.List;
 import java.util.Set;
 
-public class ConnectActivity extends FragmentActivity {
+public class ConnectActivity extends FragmentActivity  {
 
     private static final String TAG = "ConnectActivity";
     public static String EXTRA_DEVICE_ADDRESS = "device_address";
@@ -36,6 +45,12 @@ public class ConnectActivity extends FragmentActivity {
     ListView pairedListView;
     ListView newDevicesListView;
     Button BtnFindNewDevices;
+
+    private OutputStream outputStream;
+    private InputStream inStream;
+
+    KeyPairDbHandler dbHandler;
+    List<PairInformation> myPairedDevicesInfo;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,31 +65,32 @@ public class ConnectActivity extends FragmentActivity {
 
         //Initialize UI elements for the List Views and Buttons to add new devices
         pairedListView = (ListView) findViewById(R.id.pairedDevices);
-        newDevicesListView = (ListView) findViewById(R.id.discoveredDevices);
+//        newDevicesListView = (ListView) findViewById(R.id.discoveredDevices);
         BtnFindNewDevices = (Button) findViewById(R.id.buttonScanNewDevices);
         LayoutPairedDeviceList = (LinearLayout) findViewById(R.id.pairedDeviceListLayout);
-        LayoutAvailableDeviceList = (LinearLayout) findViewById(R.id.availableDeviceListLayout);
+        dbHandler = new KeyPairDbHandler(getBaseContext(), null, null, 1);
+//        LayoutAvailableDeviceList = (LinearLayout) findViewById(R.id.availableDeviceListLayout);
 
         //Set-up the search for the newly discovered devices via bluetooth
         BtnFindNewDevices.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 doDiscovery();
-                v.setVisibility(View.GONE);
+                //v.setVisibility(View.GONE);
             }
         });
 
         // Initialize array adapters. One for already paired devices and
         // one for newly discovered devices
         pairedDevicesArrayAdapter = new ArrayAdapter<String>(this, R.layout.listviewlayout);
-        mNewDevicesArrayAdapter = new ArrayAdapter<String>(this, R.layout.listviewlayout);
+//        mNewDevicesArrayAdapter = new ArrayAdapter<String>(this, R.layout.listviewlayout);
 
         // Find and set up the ListView for paired devices
         pairedListView.setAdapter(pairedDevicesArrayAdapter);
         pairedListView.setOnItemClickListener(mDeviceClickListener);
 
         // Find and set up the ListView for newly discovered devices
-        newDevicesListView.setAdapter(mNewDevicesArrayAdapter);
-        newDevicesListView.setOnItemClickListener(mDeviceClickListener);
+//        newDevicesListView.setAdapter(mNewDevicesArrayAdapter);
+//        newDevicesListView.setOnItemClickListener(mDeviceClickListener);
 
         //set bluetooth as enabled
         if(!MainActivity.isBluetoothEnabled)
@@ -91,24 +107,35 @@ public class ConnectActivity extends FragmentActivity {
         // Get the local Bluetooth adapter
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
         // Get a set of currently paired devices
-        getPairedDeviceList();
-
+        try {
+            getPairedDeviceList();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        BluetoothShareKeyFragment fragment = new BluetoothShareKeyFragment();
+        transaction.replace(R.id.sample_fragment_layout, fragment);
+        transaction.commit();
     }
 
     @Override
     public void onResume()
     {
         super.onResume();
-        getPairedDeviceList();
+        try {
+            getPairedDeviceList();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void getPairedDeviceList(){
+    public void getPairedDeviceList() throws IOException {
         Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
 
         // If there are paired devices, add each one to the ArrayAdapter
         if (pairedDevices.size() > 0) {
-            for (BluetoothDevice device : pairedDevices) {
-                pairedDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+            for (BluetoothDevice dev : pairedDevices) {
+                pairedDevicesArrayAdapter.add(dev.getName() + "\n" + dev.getAddress());
             }
         } else {
             String noDevices = getResources().getText(R.string.none_paired).toString();
@@ -121,7 +148,7 @@ public class ConnectActivity extends FragmentActivity {
      */
     private void doDiscovery() {
         Log.e(TAG, "Inside do discovery method");
-        LayoutAvailableDeviceList.setVisibility(View.VISIBLE);
+//        LayoutAvailableDeviceList.setVisibility(View.VISIBLE);
         // If we're already discovering, stop it
         if (mBtAdapter.isDiscovering()) {
             mBtAdapter.cancelDiscovery();
@@ -164,11 +191,6 @@ public class ConnectActivity extends FragmentActivity {
                         Toast.makeText(getBaseContext(), "Discovery Finished!", Toast.LENGTH_SHORT).show();
                     }
                 });
-                //setTitle(R.string.select_device);
-                if (mNewDevicesArrayAdapter.getCount() == 0) {
-                    String noDevices = getResources().getText(R.string.none_found).toString();
-                    mNewDevicesArrayAdapter.add(noDevices);
-                }
             }
         }
     };
@@ -176,6 +198,8 @@ public class ConnectActivity extends FragmentActivity {
     /**
      * The on-click listener for all devices in the ListViews
      */
+    String info;
+    String address;
     private AdapterView.OnItemClickListener mDeviceClickListener
             = new AdapterView.OnItemClickListener() {
         public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
@@ -188,26 +212,48 @@ public class ConnectActivity extends FragmentActivity {
 //            transaction.commit();
 
             //Share key fragment activity to be started as an alert dialog and send key to the paired or discovered device
-            showFragmentForSharingKey();
+            showFragmentForSharingKey(v);
 
 
             // Get the device MAC address, which is the last 17 chars in the View
-            String info = ((TextView) v).getText().toString();
-            String address = info.substring(info.length() - 17);
+
+            info = ((TextView) v).getText().toString();
+            address = info.substring(info.length() - 17);
 
             // Create the result Intent and include the MAC address
-            Intent intent = new Intent();
-            intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
-            // Set result and finish this Activity
-            setResult(Activity.RESULT_OK, intent); //in the receiving activity, add the details to the database
-            finish();
+//            Intent intent = new Intent();
+//            intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
+//            // Set result and finish this Activity
+//            setResult(Activity.RESULT_OK, intent); //in the receiving activity, add the details to the database
+//            finish();
         }
     };
 
-    private void showFragmentForSharingKey() {
+    private void showFragmentForSharingKey(View view) {
         //Implement a dialogFragment which will let user enter the key for sharing and storing on to database
-
+        SendKeyFragment dialog=new SendKeyFragment();
+        dialog.show(getFragmentManager(),"SendKeyDialog");
     }
+
+//    @Override
+//    public void KeyCreateComplete(String key) throws IOException {
+//        // show the toast of key (for test)
+//        Toast.makeText(this,"key: " + key, Toast.LENGTH_SHORT).show();
+//
+//        // jump to bluetoothchat fragement with the key
+//        BluetoothShareKeyFragment bluetoothShareKeyFragment = new BluetoothShareKeyFragment();
+//        FragmentManager fm = getSupportFragmentManager();
+//        FragmentTransaction transaction=fm.beginTransaction();
+//        Bundle bundle = new Bundle();
+//        bundle.putString("key", key);
+//        bluetoothShareKeyFragment.setArguments(bundle);
+//        transaction.add(R.id.sample_fragment_layout, bluetoothShareKeyFragment);
+//        transaction.addToBackStack(null);
+//        transaction.commit();
+//
+//        //Add the key to the database along with the name and the MAC address
+//        dbHandler.createPairInfoEntry(new PairInformation(dbHandler.getPairedDeviceCount(),info,address,key));
+//    }
 
     public boolean setBluetooth(boolean enable) {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
